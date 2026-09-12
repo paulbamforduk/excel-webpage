@@ -1,0 +1,38 @@
+name: Auto Rebuild League Table
+
+# Wakes up the cloud robot every single time your spreadsheet file changes
+on:
+  push:
+    paths:
+      - 'data.xlsx'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    
+    # 1. Cloud robot downloads your folder files
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Cloud robot installs Python inside its virtual system
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    # 3. Cloud robot installs the data reader dependencies
+    - name: Install Data Packages
+      run: pip install pandas openpyxl
+
+    # 4. Cloud robot executes your script to make the pristine index.html
+    - name: Run Build Script
+      run: python build_table.py
+
+    # 5. Cloud robot instantly pushes the new index.html to Netlify
+    - name: Deploy Live to Netlify
+      uses: SouthAtMidnight/netlify-deploy-action@v1.0.0
+      with:
+        auth-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        site-id: ${{ secrets.NETLIFY_SITE_ID }}
+        build-dir: '.'
