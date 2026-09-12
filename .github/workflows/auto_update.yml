@@ -29,10 +29,14 @@ jobs:
     - name: Run Build Script
       run: python build_table.py
 
-    # 5. Cloud robot instantly pushes the new index.html to Netlify
+    # 5. FIXED: Swapped to the official, highly-stable Netlify deployment engine
     - name: Deploy Live to Netlify
-      uses: SouthAtMidnight/netlify-deploy-action@v1.0.0
+      uses: nwtgck/actions-netlify@v3.0
       with:
-        auth-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        site-id: ${{ secrets.NETLIFY_SITE_ID }}
-        build-dir: '.'
+        publish-dir: '.'
+        production-branch: 'main'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Automated League Table Update"
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
