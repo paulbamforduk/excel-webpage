@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>League Standings</title>
+    <!-- Tailwind CSS for clean formatting -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- Industry-standard SheetJS engine link -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header Section -->
+        <header class="mb-6 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">🏆 LEAGUE TABLE</h1>
+            <p class="text-slate-500 mt-1 text-sm">Updated automatically from your spreadsheet.</p>
+        </header>
+
+        <!-- Error Container (Hidden by default) -->
+        <div id="error_container" class="hidden bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl mb-6">
+            <strong class="font-bold">System Error:</strong> <span id="error_text"></span>
+        </div>
+
+        <!-- League Standings Table Wrapper -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden" id="table_wrapper">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-left text-sm" id="data_table">
+                    <!-- Javascript hooks rows here dynamically -->
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // NO MORE TIMEOUTS: 'load' fires only when the page and scripts are completely downloaded
+        window.addEventListener('load', () => {
+            fetchExcelAutomatically();
+        });
+
+        function fetchExcelAutomatically() {
+            const errorContainer = document.getElementById('error_container');
+
+            fetch('data.xlsx')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Could not find data.xlsx. Make sure your spreadsheet file is named exactly data.xlsx and saved in this folder.");
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(buffer => {
+                    const data = new Uint8Array(buffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0]; 
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (!jsonRows || jsonRows.length === 0) {
+                        throw new Error("The Excel spreadsheet appears to be empty.");
+                    }
+
+                    // Render the table layout view
+                    renderLeagueTable(jsonRows);
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('error_text').textContent = err.message;
+                    errorContainer.classList.remove('hidden');
+                });
+        }
+
+        function renderLeagueTable(rows) {
+            const table = document.getElementById('data_table');
+            const wrapper = document.getElementById('table_wrapper');
+            table.innerHTML = ''; 
+            
+            // 1. Build Header Row (Row 1 from spreadsheet)
+            const thead = document.createElement('thead');
+            thead.className = 'bg-slate-100 border-b border-slate-200';
+            const headerTr = document.createElement('tr');
+            
+            rows[0].forEach((headerText) => { 
+                const th = document.createElement('th');
+                th.className = 'px-6 py-4 font-bold text-slate-700 tracking-wide uppercase text-xs';
+                th.textContent = headerText !== undefined ? headerText : '';
+                headerTr.appendChild(th);
+            });
+            thead.appendChild(headerTr);
+            table.appendChild(thead);
+
+            // 2. Build Content Rows (The teams data)
+            const tbody = document.createElement('tbody');
+            tbody.className = 'divide-y divide-slate-100 bg-white font-medium';
+
+            for (let i = 1; i < rows.length; i++) {
+                if (!rows[i] || rows[i].length === 0) continue;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/70 transition-colors';
+                
+                for (let j = 0; j < rows[i].length; j++) {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-3.5 text-slate-600 whitespace-nowrap';
+                    
+                    let cellValue = rows[i][j] !== undefined ? rows[i][j] : '';
+                    td.textContent = cellValue;
+
+                    // Bold the team name (column index 0)
+                    if (j === 0) {
+                        td.className += ' font-bold text-slate-900';
+                    }
+                    
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            wrapper.classList.remove('hidden'); 
+        }
+    </script>
+</body>
+</html>
